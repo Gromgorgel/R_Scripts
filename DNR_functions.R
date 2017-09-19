@@ -198,7 +198,7 @@ DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCT
     # we split the DNA string into a vector of single characters
     splitt <- strsplit(as.character(myseq), "")[[1]]
     dnr <- rep(0, times = length(splitt)) # set defaults to "not ACGT" (zero)
-    dnr[which(splitt %in% names(IUPAC_CODE_MAP)[1:4])] <- 1  # replace all ACGT positions with "1"
+    dnr[splitt %in% names(IUPAC_CODE_MAP)[1:4]] <- 1  # replace all ACGT positions with "1"
     # now we will use rle to locate the stretches of uninterupted 'normal' code
     dnrle <- rle(dnr)
     # Now we need to build a table that lists all stretches' start, stop and length.
@@ -281,3 +281,17 @@ unDNR <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4
   ## Standard NA output
   return(NA)
 } # function END
+
+################################################################################ Another Function!
+##################################################################################################
+################################################################################
+# A more elegant way to split numbers into their digits
+# can be applied to vectors of numbers (will return a list)
+digits <- function(x){
+	if(length(x) > 1 ){
+		lapply(x, digits)
+	}else{
+		n <- nchar(x)
+		rev( x %/% 10^seq(0, length.out=n) %% 10 )
+	}
+}
