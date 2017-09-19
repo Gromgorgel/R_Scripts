@@ -23,28 +23,34 @@
  # V 0.0.3 = Tm has been made optional to allow for the construction of isothermal primers (where Tm doesn't matter much).
  #           (Tm is calcualted but does not contribute to the score, also Tm calculation has a bigger window)
  # V 0.0.4 = In an effort to improve speed of the algorithm, we switch to DNR based operations for all steps.
- #           unfortunately, that means we'll have to write some support functions to be able to get away from string based operations.
+ #           unfortunately, that means we'll have to write some support functions to be able to get away from 
+ #           string based operations.
 
 ## Known Issues
  # when counting the single base runs, the degenerate base is currently not always taken into account:
-  # eg, when you have AAAM the algorithm will see it as a run of 3 bases, while in fact it is AAA A/C
-  # this should be taken into account somehow. (idea: try both possibilities and take the worst score)
-  # status : SOLVED
+   # eg, when you have AAAM the algorithm will see it as a run of 3 bases, while in fact it is AAA A/C
+   # this should be taken into account somehow. (idea: try both possibilities and take the worst score)
+   # status : SOLVED
  # no support for DNAStringSet class
   # status : DEAL WITH IT (those idiots should have at least made the commands to get the sequence length the same)
  # the script is slow.
-  # status : IMPROVED (I did some checks & the slowest step was BY FAR the calcualtion of the GC percentage followed by hairpin check (Tm calc in 3rd place)
-  #                    what made 'hairpin' different from the other steps was the use of 'grep' which therefore seemed to be the bottleneck.
-  #                    Probably 'letterFrequency' (which I used for GC content) also uses 'grep' or something even less efficient.
-  #                    I have replaced all use of 'grep' and 'letterFrequency' by DNR based numerical approaches, so apart from a few initial steps the script
-  #                    is now free of string-based operations. Elapsed time for standard inputs dropped from 15.40 to 4.0 seconds on my system.
+   # status : IMPROVED (I did some checks & the slowest step was BY FAR the calcualtion of the GC percentage followed by hairpin 
+   #                    check (Tm calc in 3rd place) what made 'hairpin' different from the other steps was the use of 'grep'
+   #                    which therefore seemed to be the bottleneck. Probably 'letterFrequency' (which previousely I used for 
+   #                    GC content) also uses 'grep' or something even less efficient. I have replaced all use of 'grep' and 
+   #                   'letterFrequency' by DNR based numerical approaches, so apart from a few initial steps the script
+   #                    is now free of string-based operations. Elapsed time for standard inputs dropped from 15.40 to 
+   #                    4.0 seconds on my system.
  # Tm window could be smaller for most usage this function will see
-  # status : DEAL WITH IT (making the Tm window smaller when we're not making isothermal primers could speed up the function, I'll eventually get round to this)
+   # status : DEAL WITH IT (making the Tm window smaller when we're not making isothermal primers could speed up 
+   #                        the function, I'll eventually get round to this)
 
 ## LEGEND
 # myseq = DNAString object in which to find the primers
 # limits = numeric: c(min, max) primer length
 # top = numeric: number of primer candidated to return
+# melt = logical: should Tm contribute to primer score
+# silent =  logical: should (warning) messages be printed
 # ...
 
 optimus.primer <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG"),
