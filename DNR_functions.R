@@ -31,7 +31,7 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
     # The first five types consist of simple numerical replacements. we make a look-up table
     letterz <- names(IUPAC_CODE_MAP)
                        #     A     C     G     T       M     R     W     S     Y     K     V     H     D     B     N
-    conv.tab <- matrix(c(    1,    2,    3,    4,     12,   13,   14,   23,   24,   34,  123,  124,  134,  234,  1234,  # note that the digits of the integers for the degenerate bases indicate which bases they represent
+    conv.tab <- matrix(c(    1,    2,    3,    4,     12,   13,   14,   23,   24,   34,  123,  124,  134,  234,  1234,  
                            -1.5,   .5,  -.5,   1.5,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
                         0.126, 0.134, 0.0806, 0.1335, NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
                             70,   58,   78,   66,     NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
@@ -194,7 +194,8 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
 
 DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"), cutoff = 20){
   require(Biostrings)
-  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
+  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence
+	                              # it has to be in the "DNAString" format
     # we split the DNA string into a vector of single characters
     splitt <- strsplit(as.character(myseq), "")[[1]]
     dnr <- rep(0, times = length(splitt)) # set defaults to "not ACGT" (zero)
@@ -229,7 +230,8 @@ DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCT
 ################################################################################
 # Since we want to abandon working with strings all together we'll write a function to make the (reverse) complement
 # sequence from a type 1 DNR
-dnr.comp <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2, 4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
+dnr.comp <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 
+			       2, 4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
                      reverse.comp = TRUE){
   ## If there's only standard bases, we can just
   if(all(mydnr < 5)){ # there are degenerate bases, we do some more swapping
