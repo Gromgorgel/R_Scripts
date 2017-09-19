@@ -22,4 +22,5 @@ This is the only representation to which I have made significant changes compare
 In addition to the main `DNR()` function three more functions are contained in the script. They all offer some additional functionality when working with DNR:
 - `unDNR()`: turn your number sequence back into DNA (DNAString object), currently only supports type 1 (integer DNR)
 - `dnr.comp()`: turn your DNR into its complement or reverse complement (`reverse.comp = TRUE`), currently only supports type 1 (integer DNR)
+- `digits()`: split a number into its digits
 - `DNR.2()`: given a DNR type 1 (integer) sequence containing degenerate bases, this function identifies and returns the location of stretches of standard bases (eg. after doing a multiple alignment, use this to find the region where you want to design primers so that they'll amplify all sequences from the alignment)
