@@ -185,3 +185,99 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
   ## Standard NA output
   return(NA)
 } # function END
+
+
+################################################################################ Another Function!
+##################################################################################################
+################################################################################
+# quick knock-off of the above version that will identify and tabulate runs of non-degenerate nucleotides
+
+DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"), cutoff = 20){
+  require(Biostrings)
+  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
+    # we split the DNA string into a vector of single characters
+    splitt <- strsplit(as.character(myseq), "")[[1]]
+    dnr <- rep(0, times = length(splitt)) # set defaults to "not ACGT" (zero)
+    dnr[which(splitt %in% names(IUPAC_CODE_MAP)[1:4])] <- 1  # replace all ACGT positions with "1"
+    # now we will use rle to locate the stretches of uninterupted 'normal' code
+    dnrle <- rle(dnr)
+    # Now we need to build a table that lists all stretches' start, stop and length.
+    dntab <- matrix(nrow = length(dnrle$values), ncol = 4)
+      dntab[, 1] <- dnrle$values
+      dntab[, 2] <- dnrle$lengths
+      dntab[, 3] <- c(1, head(cumsum(dnrle$lengths), -1) + 1)
+      dntab[, 4] <- cumsum(dnrle$lengths)
+      colnames(dntab) <- c("value", "length", "start", "end")
+    # lastly we apply the cutoff, remove zeo-values from the table, & sort longest to shortest
+    dntab <- dntab[-which(dnrle$values == 0), ]
+    dntab <- dntab[-which(dntab[, 2] < cutoff), ]
+    dntab <- dntab[ order(dntab[, 2], decreasing = T), ]
+  ## Succesful analysis output
+  return(dntab[, -1])
+################################################################################
+  }else{ #CLASS DNASTRING
+    message("input sequence is not of class DNAString")
+    message("NA output")
+  }# End of input class check
+
+  ## Standard NA output
+  return(NA)
+} # function END
+
+################################################################################ Another Function!
+##################################################################################################
+################################################################################
+# Since we want to abandon working with strings all together we'll write a function to make the (reverse) complement
+# sequence from a type 1 DNR
+dnr.comp <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2, 4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
+                     reverse.comp = TRUE){
+  ## If there's only standard bases, we can just
+  if(all(mydnr < 5)){ # there are degenerate bases, we do some more swapping
+   revdnr <- 5 - mydnr
+  }else{
+  ## create vectors
+   comple <- c(  2, 4, 3, 1, 34, 24, 14, 23, 13, 12, 234, 134, 124, 123, 1234)
+   values <- c(  3, 1, 2, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+   revdnr <- rep(0, times = length(mydnr))
+  # run the vectors
+   for(i in seq_along(values)){
+      revdnr[which(mydnr == values[i])] <- comple[i]
+      } #END of for loop
+  }# END of if > 5
+  ## make reverse ?
+  if(isTRUE(reverse.comp)){
+     return(rev(revdnr))
+  }else{
+     return(revdnr)
+  }## END of reverse
+}## End of function
+
+################################################################################ Another Function!
+##################################################################################################
+################################################################################
+# just to be able to check the results of our above function(s) we'll write one that'll take
+# a bunch of nrs and turn them into a DNA string!
+
+unDNR <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2,
+                            4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3)){
+   # check if there aren't any 'illegal' numbers
+   allowed <- c(  3, 1, 2, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+   letterz <- c("G", "A", "C", "T", "M", "R", "W", "S", "Y", "K", "V", "H", "D", "B", "N")
+   if(all(mydnr %in% allowed)){
+       X1 <- rep("Ni", times = length(mydnr))
+       for(i in seq_along(allowed)){
+          X1[which(mydnr == allowed[i])] <- letterz[i]
+          } #END of for loop
+################################################
+  ## Succesful analysis output
+   # collapsed and made into a DNAString
+  return(DNAString(paste(X1, collapse = "")))
+################################################################################
+  }else{ #ILLEGAL NUMBERS
+    message("input sequence contains illegal numbers")
+    message("NA output")
+  }# End of input class check
+
+  ## Standard NA output
+  return(NA)
+} # function END
