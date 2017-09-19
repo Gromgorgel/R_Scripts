@@ -1,4 +1,4 @@
-# R_Scripts
+# R Scripts
 A collection of assorted R scripts for Bioinformatics purposes
 
 ## the 'Optimus_primer.R' script
