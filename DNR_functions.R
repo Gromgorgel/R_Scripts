@@ -211,10 +211,20 @@ DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCT
       colnames(dntab) <- c("value", "length", "start", "end")
     # lastly we apply the cutoff, remove zeo-values from the table, & sort longest to shortest
     dntab <- dntab[-which(dnrle$values == 0), ]
-    dntab <- dntab[-which(dntab[, 2] < cutoff), ]
-    dntab <- dntab[ order(dntab[, 2], decreasing = T), ]
+     # quick check to see if there are indeed any stretches that pass the cut-off
+     if(any(dntab[, 2] > cutoff)){
+        dntab <- dntab[-which(dntab[, 2] < cutoff), -1] # apply cutoff and remove "value" column
+        if(length(dntab) > 4){ #if only one row remains ordering will yield an error
+                dntab <- dntab[ order(dntab[, 1], decreasing = T), ]
+                }
+     }else{
+        message("no non-degenerate runs longer than cutoff")
+        message("returning three longest runs")
+        dntab <- dntab[ order(dntab[, 2], decreasing = T), ]
+        dntab <- dntab[1:3, -1] # select top 3 and remove "value" column
+     }
   ## Succesful analysis output
-  return(dntab[, -1])
+  return(dntab)
 ################################################################################
   }else{ #CLASS DNASTRING
     message("input sequence is not of class DNAString")
