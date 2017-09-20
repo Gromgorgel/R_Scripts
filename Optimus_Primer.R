@@ -25,6 +25,7 @@
  # V 0.0.4 = In an effort to improve speed of the algorithm, we switch to DNR based operations for all steps.
  #           unfortunately, that means we'll have to write some support functions to be able to get away from 
  #           string based operations.
+ # V 0.0.5 = added support for DNAStringSet & updated sequence length check
 
 ## Known Issues
  # when counting the single base runs, the degenerate base is currently not always taken into account:
@@ -59,10 +60,20 @@ require("DECIPHER")
 
 # check parameters (we only continue if all boxes are checked)
 ################################################################################
-if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
-if(length(myseq) >= limits[2]){ # seq lenght has to be at least limit
-if(sum(strsplit(as.character(myseq), "")[[1]] %in% names(IUPAC_CODE_MAP)[5:15], na.rm = T) <= 1){    # do not allow more than one degenerate base
-
+if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
+	lapply(myseq, optimus.primer)
+}else{
+ if(class(myseq)[1] == "DNAString"){ # for the basic operations to work it has to be in the "DNAString" format
+ if(length(myseq) >= limits[1]){ # seq lenght has to be at least the lower limit
+    if(length(myseq) < limits[2]){ # if seq is shorter than upper limit, reduce upper limit
+       if(!isTRUE(silent)){
+       message("sequence shorter than upper limit, reducing limit...")
+       }    
+       limits[2] <- length(myseq)
+    } # END reduce upper limit
+ # We do not allow more than one degenerate base: 
+ if(sum(strsplit(as.character(myseq), "")[[1]] %in% names(IUPAC_CODE_MAP)[5:15], na.rm = T) <= 1){    
+  
 # Main function body
 ################################################################################
   # we make a look-up table to evaluate the parameters  calculated
@@ -200,13 +211,14 @@ if(sum(strsplit(as.character(myseq), "")[[1]] %in% names(IUPAC_CODE_MAP)[5:15], 
   message("NA output")
 }# End of degenerate check
 }else{ #SEQ LENGTH
-  message("input sequence shorter than upper primer length limit")
+  message("input sequence shorter than lower primer length limit")
   message("NA output")
 }# End of length check
 }else{ #CLASS DNASTRING
   message("input sequence is not of class DNAString")
   message("NA output")
-}# End of input class check
+}# End of input class check (DNAString)
+}# End of input class check (DNAStringSet)
 
 ## Standard NA output
 return(NA)
