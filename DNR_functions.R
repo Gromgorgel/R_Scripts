@@ -241,7 +241,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
                                                } # END flank save
           }else if(i > length(dntab[, 1]) - 2){ # while we're at it we'll check if we don't caus a 'subscript out of bounds' error
             flanks <- if(dntab[i - 1, 2] == 1){# check if there ar not more than 1 degenerate bases
-                                                c(i - 2, dntab[i - 1, 2], dntab[i + 2, 2], 3)
+                                                c(i - 2, dntab[i - 1, 2], dntab[i - 2, 2], 3)
                                                }else{# if so make vector empty for downstream compatibility
                                                 vector()
                                                } # END flank save
