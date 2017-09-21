@@ -192,10 +192,18 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
 ################################################################################
 # quick knock-off of the above version that will identify and tabulate runs of non-degenerate nucleotides
 
-DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"), cutoff = 20){
+## Changelog
+ # 0.02 added ability to incorporate 1 flanking region (if only one degenerate base in between), set fuse to >0
+ #      also added ability to select always the longest X runs of bases (set top.up to X)
+ # 0.03 added support for DNAStingSet
+
+DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"),
+                  cutoff = 20, fuse = 1, top.up = 3){
+if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
+	lapply(myseq, optimus.primer)
+}else{
   require(Biostrings)
-  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence
-	                              # it has to be in the "DNAString" format
+  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
     # we split the DNA string into a vector of single characters
     splitt <- strsplit(as.character(myseq), "")[[1]]
     dnr <- rep(0, times = length(splitt)) # set defaults to "not ACGT" (zero)
@@ -203,36 +211,71 @@ DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCT
     # now we will use rle to locate the stretches of uninterupted 'normal' code
     dnrle <- rle(dnr)
     # Now we need to build a table that lists all stretches' start, stop and length.
-    dntab <- matrix(nrow = length(dnrle$values), ncol = 4)
+    dntab <- matrix(nrow = length(dnrle$values), ncol = 5)
       dntab[, 1] <- dnrle$values
       dntab[, 2] <- dnrle$lengths
       dntab[, 3] <- c(1, head(cumsum(dnrle$lengths), -1) + 1)
       dntab[, 4] <- cumsum(dnrle$lengths)
-      colnames(dntab) <- c("value", "length", "start", "end")
-    # lastly we apply the cutoff, remove zeo-values from the table, & sort longest to shortest
-    dntab <- dntab[-which(dnrle$values == 0), ]
-     # quick check to see if there are indeed any stretches that pass the cut-off
-     if(any(dntab[, 2] > cutoff)){
-        dntab <- dntab[-which(dntab[, 2] < cutoff), -1] # apply cutoff and remove "value" column
-        if(length(dntab) > 4){ #if only one row remains ordering will yield an error
-                dntab <- dntab[ order(dntab[, 1], decreasing = T), ]
-                }
-     }else{
-        message("no non-degenerate runs longer than cutoff")
-        message("returning three longest runs")
-        dntab <- dntab[ order(dntab[, 2], decreasing = T), ]
-        dntab <- dntab[1:3, -1] # select top 3 and remove "value" column
-     }
+      dntab[, 5] <- rep(0, times = length(dnrle$values))
+      colnames(dntab) <- c("value", "length", "start", "end", "select")
+    # For the next part we want to mark all regions that pass the cutoff & check if there are at least 3
+   ## if not, we add the longest below-cutoff regions until we have at least 3 (or top.up) candidate regions
+   ## quick check to see if there are indeed any stretches that pass the cut-off
+    # we start by adding a mark in the select column for all above the cut-off
+    dntab[dnrle$lengths >= cutoff & dnrle$values == 1, 5] <- 1
+    if(sum(dntab[, 5]) < top.up){ # the number of selected regions needs topping up
+        message("few non-degenerate runs longer than cutoff, topping up...")
+        dntab[order(dntab[, 1], dntab[, 2] ,decreasing = T)[seq(from = 1, to = top.up - sum(dntab[, 5]), by = 1)], 5] <- 1
+    } # END of top.up
+    if(fuse > 0){ # extend the region to incorporate degenerate bases
+        # for each selected row, we check the the region before and after (and use the longest)
+        # we also check that there is only one degenerate base in between
+        for(i in which(dntab[, 5] == 1)){
+          # first we need a check if the region selected does not have row number 1 or 2
+          # this will cause negative subscripts downstream which throws an error
+          if(i <= 2){
+            flanks <- if(dntab[i + 1, 2] == 1){ # check if there ar not more than 1 degenerate bases
+                                                c(i + 2, dntab[i + 1, 2], dntab[i + 2, 2], 4)
+                                               }else{ # if so make vector empty for downstream compatibility
+                                                vector()
+                                               } # END flank save
+          }else if(i > length(dntab[, 1]) - 2){ # while we're at it we'll check if we don't caus a 'subscript out of bounds' error
+            flanks <- if(dntab[i - 1, 2] == 1){# check if there ar not more than 1 degenerate bases
+                                                c(i - 2, dntab[i - 1, 2], dntab[i + 2, 2], 3)
+                                               }else{# if so make vector empty for downstream compatibility
+                                                vector()
+                                               } # END flank save
+          }else{
+            # we select the flanking regions key information (nr of bases in between, length)
+            flanks <- matrix(c(i - 2, i + 2,  # the rownumbers of the next non-degenerate runs
+                             dntab[c(i - 1, i + 1), 2],  # the number of degeneratge bases in between
+                             dntab[c(i - 2, i + 2), 2],  # the length of the next non degenarate run
+                             3, 4),                      # which column to update if this flank wins
+                             nrow = 2, ncol = 4)
+            # now we select the best option for fusing(if any)
+          flanks <- flanks[which.max(flanks[flanks[, 2] == 1, 3]), ]
+          }# END of if-else i <= 2
+          # check if any flanks remain
+          if(length(flanks != 0)){ #alright, we can update the start or stop of our current region
+              dntab[i, flanks[4]] <- dntab[flanks[1], flanks[4]]
+              dntab[i, 2] <- dntab[i, 4] - dntab[i, 3] + 1
+          } # END of if != 0
+        } # END of for loop
+    }# END of fuse
+
+  ## all that is left is to trim the table down to the selected rows & sort them
+    dntab <- dntab[dntab[, 5] != 0, ]
+    dntab <- dntab[order(dntab[, 2], decreasing = T), -c(1, 5)] # also remove none informative columns
   ## Succesful analysis output
   return(dntab)
 ################################################################################
   }else{ #CLASS DNASTRING
     message("input sequence is not of class DNAString")
     message("NA output")
-  }# End of input class check
-
+  }# End of input class check (DNAString)
+}# End of input class check (DNAStringSet)
   ## Standard NA output
-  return(NA)
+  return(c("length" = NA, "start" = NA, "end" = NA))
 } # function END
 
 ################################################################################ Another Function!
