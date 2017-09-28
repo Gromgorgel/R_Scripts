@@ -26,6 +26,7 @@
  #           unfortunately, that means we'll have to write some support functions to be able to get away from 
  #           string based operations.
  # V 0.0.5 = added support for DNAStringSet & updated sequence length check
+ # V 0.0.6 = minor BugFixes
 
 ## Known Issues
  # when counting the single base runs, the degenerate base is currently not always taken into account:
