@@ -191,6 +191,10 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
       score.table[i, 5] <- nuc.score
   } # END of main for loop
   ## Succesful analysis output
+   # check if there are at least 'top' primer candidates (in short myseq there may be less)
+   if(dim(score.table)[1] < top){
+      top <- dim(score.table)[1]  # if there are less than 'top' primers, we return them all
+      }# END top check					   
   trim.table <- score.table[order(score.table[, 5], decreasing = T), ][1:top, ]
   ## print the primers & info
   if(!isTRUE(silent)){
