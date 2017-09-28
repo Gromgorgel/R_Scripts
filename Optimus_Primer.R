@@ -79,7 +79,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
 ################################################################################
   # we make a look-up table to evaluate the parameters  calculated
   eval.tab <- matrix(c(-6, -5, -4, -3, -2, -1, 0,  1, 2, 3,                                         # Available scores
-                       10,  9,  8,  7,  6,  5, 4,  3, 2, 1,                                         # bins for Tm
+                       26,  9,  8,  7,  6,  5, 4,  3, 2, 1,                                         # bins for Tm (last bin has max Tm difference + 1)
                        30, 25, 22, 19, 16 ,13 ,10, 6, 3, 0,                                         # bins for GC content
                        NA, NA, NA,  5,  4,  0,  1, 2, 3, NA), nrow = 4, ncol = 10, byrow = T)       # bins for GC-clamp
 
