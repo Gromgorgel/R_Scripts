@@ -252,8 +252,12 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
                              dntab[c(i - 2, i + 2), 2],  # the length of the next non degenarate run
                              3, 4),                      # which column to update if this flank wins
                              nrow = 2, ncol = 4)
-            # now we select the best option for fusing(if any)
-          flanks <- flanks[which.max(flanks[flanks[, 2] == 1, 3]), ]
+            # now we select the best option for fusing (if any)
+            flanks <- flanks[order(flanks[, 3], decreasing = T), ] # order by length of next non degenerate run
+            flanks <- flanks[ flanks[, 2] == 1, ]                  # take the top candidate after removing all those with too many degenerate bases in between
+            if(length(flanks) > 4){ # check if multiple candidates remain
+              flanks <- flanks[1, ]
+            }
           }# END of if-else i <= 2
           # check if any flanks remain
           if(length(flanks != 0)){ #alright, we can update the start or stop of our current region
