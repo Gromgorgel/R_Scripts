@@ -144,8 +144,9 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
       ### checking for single base repeats
         if(all(mydnr < 10)){
           if(any(rle(mydnr)$lengths >= 4)){ # check for runs of at least four bases
-            # if there are any, we score them by their size:
-            score.update <-  - 2 * (rle(mydnr)$lengths[which(rle(mydnr)$lengths > 3)] - 3.5)
+            # if there are any, we score them by their size
+	    # note that we take the sum in case there are multiple runs of bases:
+            score.update <-  sum( - 2 * (rle(mydnr)$lengths[which(rle(mydnr)$lengths > 3)] - 3.5) )
             } # END of 4 base (or more) stretch
         }else{ # END no degnerate bases
             # deg.pos and deg.alt already exit. We'll reset the scores to bu sure.
@@ -153,7 +154,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
             for(j in seq_along(deg.alt)){
               altdnr <- c(mydnr[1:(deg.pos - 1)], deg.alt[j], mydnr[(deg.pos + 1):length(mydnr)])
               if(any(rle(altdnr)$lengths >= 4)){ # check for runs of at least four bases
-                alt.scores[j] <- - 2 * (rle(altdnr)$lengths[which(rle(altdnr)$lengths > 3)] - 3.5)
+                alt.scores[j] <- sum( - 2 * (rle(altdnr)$lengths[which(rle(altdnr)$lengths > 3)] - 3.5))
               }else{
                 alt.scores[j] <- 0
               } # if-else END
