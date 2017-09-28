@@ -273,9 +273,9 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
     message("input sequence is not of class DNAString")
     message("NA output")
   }# End of input class check (DNAString)
-}# End of input class check (DNAStringSet)
   ## Standard NA output
-  return(c("length" = NA, "start" = NA, "end" = NA))
+  return(c("length" = NA, "start" = NA, "end" = NA))	
+}# End of input class check (DNAStringSet)
 } # function END
 
 ################################################################################ Another Function!
