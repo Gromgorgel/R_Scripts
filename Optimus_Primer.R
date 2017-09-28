@@ -79,7 +79,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
 ################################################################################
   # we make a look-up table to evaluate the parameters  calculated
   eval.tab <- matrix(c(-6, -5, -4, -3, -2, -1, 0,  1, 2, 3,                                         # Available scores
-                       26,  9,  8,  7,  6,  5, 4,  3, 2, 1,                                         # bins for Tm (last bin has max Tm difference + 1)
+                       10,  9,  8,  7,  6,  5, 4,  3, 2, 1,                                         # bins for Tm 
                        30, 25, 22, 19, 16 ,13 ,10, 6, 3, 0,                                         # bins for GC content
                        NA, NA, NA,  5,  4,  0,  1, 2, 3, NA), nrow = 4, ncol = 10, byrow = T)       # bins for GC-clamp
 
@@ -108,7 +108,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
       ### we'll start by calculating the Tm & starting the score
         score.table[i, 4] <- seq(from = 50, to = 85, by = 0.1)[which.max(MeltDNA(DNAStringSet(mynuc), temps = seq(from = 50, to = 85, by = 0.1) , type = "derivative"))]
       if(isTRUE(melt)){
-        nuc.score <- eval.tab[1, max(which(eval.tab[2,] > abs(60 - score.table[i, 4])))]
+        nuc.score <- eval.tab[1, which.min(abs(eval.tab[3,] - abs(60 - score.table[i, 4])))]	      
       }else{
         nuc.score <- 0
       }
@@ -122,7 +122,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
         # eg: H ~ ACT and thus gets 1/3
         freq <- sum(hist(mydnr, breaks = c(0, 1.5, 3.5, 4.5, 13.5, 15, 23.5, 35, 123.5, 135, 235, 1500), plot = F)$counts *
                                          c(0, 1, 0, 0.5, 0, 1, 0.5, 2/3, 1/3, 2/3, 1/2))/length(mydnr) * 100
-        nuc.score <- nuc.score + eval.tab[1, max(which(eval.tab[3,] > abs(50 - freq)))]
+        nuc.score <- nuc.score + eval.tab[1, which.min(abs(eval.tab[3,] - abs(50 - freq)))]        
 
       ### add the GC-clamp score
         if(all(mydnr < 10)){
