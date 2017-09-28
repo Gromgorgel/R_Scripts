@@ -200,7 +200,7 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
 DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"),
                   cutoff = 20, fuse = 1, top.up = 3){
 if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
-	lapply(myseq, optimus.primer)
+	lapply(myseq, DNR.2)
 }else{
   require(Biostrings)
   if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
