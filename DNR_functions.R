@@ -24,14 +24,28 @@
 ## Changelog
  # 0.02 added support for degenerate bases to the 'integer' DNR.
  # 0.03 added check for degenerate bases (and force "integer" if so)
- 
+ # 0.04 added support for DNAStringSet
+ # 0.05 removed for-loop for types 1:5
+
+################################################################################
+
 DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG"), type = 1){
-  require(Biostrings)
+
+require(Biostrings)
+
+# check parameters (we only continue if all boxes are checked)
+################################################################################
+if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
+	lapply(myseq, DNR)
+}else{
   if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
+
+# Main function body
+################################################################################
+
     # The first five types consist of simple numerical replacements. we make a look-up table
-    letterz <- names(IUPAC_CODE_MAP)
                        #     A     C     G     T       M     R     W     S     Y     K     V     H     D     B     N
-    conv.tab <- matrix(c(    1,    2,    3,    4,     12,   13,   14,   23,   24,   34,  123,  124,  134,  234,  1234,  
+    conv.tab <- matrix(c(    1,    2,    3,    4,     12,   13,   14,   23,   24,   34,  123,  124,  134,  234,  1234,  # note that the digits of the integers for the degenerate bases indicate which bases they represent
                            -1.5,   .5,  -.5,   1.5,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
                         0.126, 0.134, 0.0806, 0.1335, NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
                             70,   58,   78,   66,     NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,   NA,    NA,
@@ -48,10 +62,8 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
     }# End of input class check
   ########################
     if(type <= 5){ # putting the look-up table to work
-       X1 <- rep(0, times = length(myseq))
-       for(i in seq_along(letterz)){
-          X1[which(splitt == letterz[i])] <- conv.tab[type, i]
-          } #END of for loop
+       map <- setNames(conv.tab[type, ], names(IUPAC_CODE_MAP))
+       X1 <- map[splitt]
      # singular output
        splitt <- X1
       }# types 1-5 END
@@ -180,12 +192,11 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
   }else{ #CLASS DNASTRING
     message("input sequence is not of class DNAString")
     message("NA output")
-  }# End of input class check
-
-  ## Standard NA output
+  }# End of input class check (DNAString)
+## Standard NA output
   return(NA)
+}# End of input class check (DNAStringSet)
 } # function END
-
 
 ################################################################################ Another Function!
 ##################################################################################################
@@ -194,15 +205,19 @@ DNR <- function(myseq = DNAString("GAGGCAAAGCATGAAGATGATGCTGCTCTTACAGAGTTCCTTG")
 
 ## Changelog
  # 0.02 added ability to incorporate 1 flanking region (if only one degenerate base in between), set fuse to >0
- #      also added ability to select always the longest X runs of bases (set top.up to X)
- # 0.03 added support for DNAStingSet
+ #      also added ability to select always the longest X runs of bases (set top.up to X) in case fewer pass the cutoff
+ # 0.03 added support for DNAStringSet
+
+## Known Issues
+ # currently the function can only build in 1 degenerate base, ideally, the number should  be user defined
+  # status : DEAL WITH IT (I have no need for more degenerate bases)
 
 DNR.2 <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAGSAGTTCCTTGGTGAGCAAAGCGAATCTATT"),
                   cutoff = 20, fuse = 1, top.up = 3){
+require(Biostrings)
 if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
 	lapply(myseq, DNR.2)
 }else{
-  require(Biostrings)
   if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
     # we split the DNA string into a vector of single characters
     splitt <- strsplit(as.character(myseq), "")[[1]]
@@ -225,7 +240,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
     dntab[dnrle$lengths >= cutoff & dnrle$values == 1, 5] <- 1
     if(sum(dntab[, 5]) < top.up){ # the number of selected regions needs topping up
         message("few non-degenerate runs longer than cutoff, topping up...")
-        dntab[order(dntab[, 1], dntab[, 2] ,decreasing = T)[seq(from = 1, to = top.up - sum(dntab[, 5]), by = 1)], 5] <- 1
+        dntab[order(dntab[, 1], dntab[, 2] ,decreasing = T)[seq(from = 1, to = top.up, by = 1)], 5] <- 1
     } # END of top.up
     if(fuse > 0){ # extend the region to incorporate degenerate bases
         # for each selected row, we check the the region before and after (and use the longest)
@@ -252,10 +267,10 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
                              dntab[c(i - 2, i + 2), 2],  # the length of the next non degenarate run
                              3, 4),                      # which column to update if this flank wins
                              nrow = 2, ncol = 4)
-            # now we select the best option for fusing (if any)
+            # now we select the best option for fusing(if any)
             flanks <- flanks[order(flanks[, 3], decreasing = T), ] # order by length of next non degenerate run
             flanks <- flanks[ flanks[, 2] == 1, ]                  # take the top candidate after removing all those with too many degenerate bases in between
-            if(length(flanks) > 4){ # check if multiple candidates remain
+            if(length(flanks) > 4){ # check if multiple candidate remain
               flanks <- flanks[1, ]
             }
           }# END of if-else i <= 2
@@ -278,50 +293,74 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
     message("NA output")
   }# End of input class check (DNAString)
   ## Standard NA output
-  return(c("length" = NA, "start" = NA, "end" = NA))	
+  return(c("length" = NA, "start" = NA, "end" = NA))
 }# End of input class check (DNAStringSet)
 } # function END
 
 ################################################################################ Another Function!
 ##################################################################################################
 ################################################################################
-# Since we want to abandon working with strings all together we'll write a function to make the (reverse) complement
+# Since we want to abandond working with strings all together we'll write a function ro make the (reverse) complement
 # sequence from a type 1 DNR
-dnr.comp <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 
-			       2, 4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
+dnr.comp <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2, 4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
                      reverse.comp = TRUE){
-  ## If there's only standard bases, we can just
-  if(all(mydnr < 5)){ # there are degenerate bases, we do some more swapping
-   revdnr <- 5 - mydnr
+ require(Biostrings)
+ if(mode(mydnr) == "numeric"){
+  ## check if there aren't any 'illegal' numbers
+   allowed <- c(1, 2, 3, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+  if(all(mydnr %in% allowed)){
+    ## If there's only standard bases, we can just
+    if(all(mydnr < 5)){ # there are degenerate bases, we do some more swapping
+     revdnr <- 5 - mydnr
+    }else{
+    ## create vectors
+     comple <- c(  2, 4, 3, 1, 34, 24, 14, 23, 13, 12, 234, 134, 124, 123, 1234)
+     values <- c(  3, 1, 2, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+     revdnr <- rep(0, times = length(mydnr))
+    # run the vectors
+     for(i in seq_along(values)){
+        revdnr[which(mydnr == values[i])] <- comple[i]
+        } #END of for loop
+    }# END of if > 5
+################################################
+    ## Succesful analysis output
+    # make reverse ?
+    if(isTRUE(reverse.comp)){
+       return(rev(revdnr))
+    }else{
+       return(revdnr)
+    }## END of reverse
+################################################################################
+  }else{ #ILLEGAL NUMBERS
+    message("input sequence contains illegal numbers")
+    message("NA output")
+  }# End of input class check
   }else{
-  ## create vectors
-   comple <- c(  2, 4, 3, 1, 34, 24, 14, 23, 13, 12, 234, 134, 124, 123, 1234)
-   values <- c(  3, 1, 2, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
-   revdnr <- rep(0, times = length(mydnr))
-  # run the vectors
-   for(i in seq_along(values)){
-      revdnr[which(mydnr == values[i])] <- comple[i]
-      } #END of for loop
-  }# END of if > 5
-  ## make reverse ?
-  if(isTRUE(reverse.comp)){
-     return(rev(revdnr))
-  }else{
-     return(revdnr)
-  }## END of reverse
-}## End of function
+    message("input mode not 'numeric'")
+    message("NA output")
+  }# End of input mode check
+
+  ## Standard NA output
+  return(NA)
+} # function END
 
 ################################################################################ Another Function!
 ##################################################################################################
 ################################################################################
 # just to be able to check the results of our above function(s) we'll write one that'll take
 # a bunch of nrs and turn them into a DNA string!
-
 unDNR <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2,
                             4, 3, 2, 4, 2, 4, 4, 1, 2, 1, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3)){
+ require(Biostrings)
+ if(mode(mydnr) == "list"){
+   seqset <- DNAStringSet(lapply(mydnr, unDNR))
+   names(seqset) <- names(mydnr)
+   return(seqset)
+ }
+ if(mode(mydnr) == "numeric"){
    # check if there aren't any 'illegal' numbers
-   allowed <- c(  3, 1, 2, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
-   letterz <- c("G", "A", "C", "T", "M", "R", "W", "S", "Y", "K", "V", "H", "D", "B", "N")
+   allowed <- c(1, 2, 3, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+   letterz <- names(IUPAC_CODE_MAP)
    if(all(mydnr %in% allowed)){
        X1 <- rep("Ni", times = length(mydnr))
        for(i in seq_along(allowed)){
@@ -336,6 +375,10 @@ unDNR <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4
     message("input sequence contains illegal numbers")
     message("NA output")
   }# End of input class check
+  }else{
+    message("input mode not 'numeric'")
+    message("NA output")
+  }# End of input mode check
 
   ## Standard NA output
   return(NA)
@@ -347,10 +390,67 @@ unDNR <- function(mydnr = c(3, 1, 3, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4
 # A more elegant way to split numbers into their digits
 # can be applied to vectors of numbers (will return a list)
 digits <- function(x){
+ if(mode(x) == "numeric"){
 	if(length(x) > 1 ){
 		lapply(x, digits)
 	}else{
 		n <- nchar(x)
 		rev( x %/% 10^seq(0, length.out=n) %% 10 )
 	}
-}
+ ###
+  }else{
+    message("input mode not 'numeric'")
+    message("NA output")
+  }# End of input mode check
+
+  ## Standard NA output
+  return(NA)
+} # function END
+
+
+################################################################################ Another Function!
+##################################################################################################
+################################################################################
+# de-degenerate a sequence, option to re-translate to DNA included
+explode.dnr <- function(mydnr = c(3, 1, 12, 3, 2, 1, 1, 1, 3, 2, 1, 4, 3, 1, 1, 3, 1, 4, 3, 1, 4, 3, 2,
+                            4, 3, 2, 4, 2, 4, 4, 1, 2, 123, 3, 1, 3, 4, 4, 2, 2, 4, 4, 3),
+                        undnr = FALSE){
+ require(Biostrings)
+ if(mode(mydnr) == "numeric"){
+   # check if there aren't any 'illegal' numbers
+   allowed <- c(1, 2, 3, 4, 12, 13, 14, 23, 24, 34, 123, 124, 134, 234, 1234)
+   if(all(mydnr %in% allowed)){
+      ## retrieving degenerate positions, and constructing a list of the wobbly (split) digits
+       wub.pos <- which(mydnr > 5)
+       digit.list <- vector("list", length(wub.pos)) # pre-allocate space
+       for(w in seq_along(wub.pos)){
+          digit.list[[w]] <- digits(mydnr[wub.pos[w]])
+       }# END for w
+       # we now construct all possible combinations for filling in the wobbly positions
+       the.grid <- expand.grid(digit.list)
+       # to generate the corresponding sequences we can simply walk through the rows of the.grid
+       alldnr <- vector("list", nrow(the.grid)) # pre-allocate space
+       for(i in 1:nrow(the.grid)){
+          alldnr[[i]] <- unlist(replace(mydnr, wub.pos, the.grid[i,]))
+       } #END for i
+       ## check if undnr-ing is demanded:
+       if(isTRUE(undnr)){
+          alldnr <- DNAStringSet(lapply(alldnr, unDNR))
+          }
+################################################
+  ## Succesful analysis output
+   # collapsed and made into a DNAString
+       return(alldnr)
+################################################################################
+  }else{ #ILLEGAL NUMBERS
+    message("input sequence contains illegal numbers")
+    message("NA output")
+  }# End of input class check
+  }else{
+    message("input mode not 'numeric'")
+    message("NA output")
+  }# End of input mode check
+
+  ## Standard NA output
+  return(NA)
+} # function END
