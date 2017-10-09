@@ -13,7 +13,7 @@
   # status : DEAL WITH IT (I have no need for more degenerate bases)
  # currently the function cannot deal with degenerates in the template
   # status : DEAL WITH IT (you can present the different possibilities for the template as a DNAStringSet,
-  #                        also see dnr.explode() in DNR_functions)
+  #                        also see dnr.explode() with argument 'undnr = TRUE' in DNR_functions)
 
 # for debugging purposes:
 #  templateSet <- DNAStringSet(c("seq1" = "TTTTACTGCCAACCAAGGATGTCAGATGATATCCTTGGTTGGCACTAGGATATGGATCTTCATGGAAAGGTCGTGTGGGAGACACTTTTGGATGCTGAA",
@@ -62,9 +62,9 @@ if(sum(dnr.tpl > 4) == 0){
   ## score conversion matrix 
    # by having the row & col numbers correspond to the base DNR integers we can select the right columns like: score.conv[dnr.pr2,]
   score.conv <-  matrix(c(  0,   1, 0.5,   1,  #  A = 1
-                            2,	 0,   2, 0.5,  #  C = 2
+                            2,	 0,   2,  0.5,  #  C = 2
                           0.5,   2,   0,   1,  #  G = 3
-                            2, 0.5,   2,	 0), #  T = 4
+                            2, 0.5,   2,	  0), #  T = 4
                         nrow = 4, ncol = 4, byrow = T)
   pos.penalty <- c(242.4, 202.8, 169.8, 142.4, 119.5, 100.4, 84.5 , 71.2, 60.2, 51, 43.3, 36.9,
                    31.6, 27.2, 23.5, 20.4, 17.8, 15.7, 13.9, 12.4, 11.2, 10.2, 9.3, 8.6, 8,
@@ -248,8 +248,7 @@ if(sum(dnr.tpl > 4) == 0){
   }# End of input class check (DNAString)
 
   ## Standard NA output
-  return(list("amp.table" = c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA, "amp_length" = NA),
-              "pri.table" = c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA)))
+    return(c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA, "amp_nr" = NA, "amp_length" = NA))
 }# End of input class check (DNAStringSet)
   return(amp.Set.table)
 } # function END
