@@ -227,6 +227,10 @@ if(sum(dnr.tpl > 4) == 0){
    amp.table <- amp.table[-1, ]
    } # END length amp.table
 
+ map <- setNames(c("fwd", "rev"), c(1,-1))
+ rownames(amp.table) <- map[as.character(amp.table[, 2])]
+ 
+ 
   ## Succesful analysis output
   return(amp.table)
 
