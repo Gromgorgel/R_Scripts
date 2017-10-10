@@ -21,7 +21,21 @@ In addition to the main `DNR()` function, four more functions are contained in t
 Most of these functions have been written so they'll accept either vectors, lists of vectors, DNAStrings or DNAStringSets (depending on the fucntion). They check their input & return `NA` plus some warning message if they don't get what they want. Other than that, their use should be pretty much self-explanatory.
 
 ## the 'Absorb wobble.R' script
-given a DNR sequence of type 1 (integer) that contains degenerate bases, this function identifies and returns the location of stretches of standard bases (eg. after doing a multiple alignment, use this to find the region where you want to design primers so that they'll amplify all sequences from the alignment). I apologize for the rather uninformative name.
+Given a DNA sequence that contains degenerate bases, this function identifies and returns the location of stretches of standard bases. The funtion's intended use is when performing a multiple alignments: the function can be used on the consensus sequence to find the region where one might be able to design primers so that they'll amplify all sequences from the alignment. 
+
+The function is called 'absorb wobble' because it will fuse 2 stretches of standard bases if they are separated by exactly one degenerate base. Currenlty only a single 'absorb' is supported. In case 2 absorbs are possible (upstream and downstrea) the longer one will be picked, ties are broken at random. The function has a `cutoff` argument that sets the minimum length for a region to be considered before reporting/fusing. In addition, there is a `top.up` argument that will force the fucntion to report shorter regions if less than `top.up` regions that meet the cutoff are found.
+
+'absorb wobble' heavily relies on the 'DNR functions' presented above, so those have to be loaded for it to work.
+
+### Input & Output
+The optimus.primer function has the following arguments:
+```
+absorb.wobble(myseq,  cutoff = 20, fuse = 1, top.up = 3)
+```
+- `myseq`: a DNAString or DNAStringSet object containing the DNA region(s) in which to search for non degenerate stretches (myseq has a standard value (not shown here) so for an example of the function output one can just `absorb.wobble()`)
+- `cutoff` : numerical, non-degenerate stretches shall be at least 'cut-off' long before being considerd for absorb & reporting
+- `fuse` : numerical, set to zero to disable absorbing degenerate bases, set to > 0 to enable a single absorb. In future versions this argument is intended to input the number of absorb-operations desired.
+- `top.up` = numerical, if the total number of stretches that meet the 'cutoff' requirements is below 'top.up',  the next best stretches will be added until `top-up`is reached.
 
 ## the 'Optimus primer.R' script
 Some background: you want to amplify a specific region of some genome (because you know there are some differences there that'll let you distinguish between closely related species) and you are restricted in amplicon size because of the sequencing technology at hand, which leaves only a very narrow region of less than 40bp on either side of said region in which you can design your primers. On top of that you want to automate this so you can run it over a bunch of such regions.
@@ -35,7 +49,7 @@ Users can set the desired range of primers sizes & if the primer melting tempera
 ### Input & Output
 The optimus.primer function has the following arguments:
 ```
-optimus.primer (myseq, limits = c(18, 24), top = 10, melt = TRUE, silent = FALSE, ...)
+optimus.primer(myseq, limits = c(18, 24), top = 10, melt = TRUE, silent = FALSE, ...)
 ```
 - `myseq`: a DNAString or DNAStringSet object containing the DNA region(s) in which to design primers (myseq has a standard value (not shown here) so for an example of the function output one can just `optimus.primer()`)
 - `limits`: a numerical vector of length 2, c(min, max), containing an upper and lower limit of primer length
