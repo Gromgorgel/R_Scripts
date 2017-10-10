@@ -12,14 +12,16 @@ enter `DNR()` or **DNA Numerical Representation** a function to translate a sequ
 This is the only representation to which I have made significant changes compared to what is in the above publication. The original DNR simply attributes the integers 0-3 to TCAG. Since R uses one-based indexing, I changed that to 1-4 and I changed the order of attribution to match that of the BioStrings `IUPAC_CODE_MAP` (ACGT). Coincidentally, you can just `5 - my_dnr` to get the complement sequence. This works only if there's just standard bases because I've also added the degenerate bases (M, R, W, S, Y, K, V, H, D, B, & N) for which I have composed the numbers that represent them using the digits for the bases they encode (eg. M can be A or C so it gets the number 12). This expands the functionality of the DNR as it now functions as its own look-up table: degenerate bases can be split into their digits to yield the individual bases they encode. Also, checking for degenerate bases is as simple as `any(my_dnr > 5)` since degenerate integeres are at least 2 digits.
 
 #### Other functions
-In addition to the main `DNR()` function, five more functions are contained in the script. They all offer some additional functionality when working with DNR:
+In addition to the main `DNR()` function, four more functions are contained in the script. They all offer some additional functionality when working with DNR:
 - `unDNR()`: turn your number sequence back into DNA (DNAString object), currently only supports type 1 (integer DNR)
 - `dnr.comp()`: turn your DNR into its complement or reverse complement (`reverse.comp = TRUE`), currently only supports type 1 (integer DNR)
 - `digits()`: split a number into its digits
-- `DNR.2()`: given a DNR sequence of type 1 (integer) that contains degenerate bases, this function identifies and returns the location of stretches of standard bases (eg. after doing a multiple alignment, use this to find the region where you want to design primers so that they'll amplify all sequences from the alignment). I apologize for the rather uninformative name.
 - `dnr.explode()` : given a DNR sequence of type 1 (integer) that contains degenerate bases, this function returns a list of all possible non-degenerate dnr sequences that can be derived from the mother sequence.
 
-Most of these functions have been written so they'll accept either vectors, lists of vectors, DNAStrings or DNAStringSets (depending on the fucntion). They check their input & return `NA` plus some warning message if they don't get what they want. Other than that, there use should be pretty much self-explanatory.
+Most of these functions have been written so they'll accept either vectors, lists of vectors, DNAStrings or DNAStringSets (depending on the fucntion). They check their input & return `NA` plus some warning message if they don't get what they want. Other than that, their use should be pretty much self-explanatory.
+
+## the 'Absorb wobble.R' script
+given a DNR sequence of type 1 (integer) that contains degenerate bases, this function identifies and returns the location of stretches of standard bases (eg. after doing a multiple alignment, use this to find the region where you want to design primers so that they'll amplify all sequences from the alignment). I apologize for the rather uninformative name.
 
 ## the 'Optimus primer.R' script
 Some background: you want to amplify a specific region of some genome (because you know there are some differences there that'll let you distinguish between closely related species) and you are restricted in amplicon size because of the sequencing technology at hand, which leaves only a very narrow region of less than 40bp on either side of said region in which you can design your primers. On top of that you want to automate this so you can run it over a bunch of such regions.
@@ -30,9 +32,38 @@ Users can set the desired range of primers sizes & if the primer melting tempera
 
 'optimus primer' heavily relies on the 'DNR functions' presented above, so those have to be loaded for it to work.
 
+### Input & Output
+The optimus.primer function has the following arguments:
+```
+optimus.primer (myseq, limits = c(18, 24), top = 10, melt = TRUE, silent = FALSE, ...)
+```
+- `myseq`: a DNAString or DNAStringSet object containing the DNA region(s) in which to design primers (myseq has a standard value (not shown here) so for an example of the function output one can just `optimus.primer()`)
+- `limits`: a numerical vector of length 2, c(min, max), containing an upper and lower limit of primer length
+- `top`: numerical, the number of primers to report (sorted in descending order by their score)
+- `melt`: logical, should melting temperature (Tm) be taken into account when calaculating primer score? when `FALSE`Tm is calculated & reported but does not contribute to the score.
+- `silent`: logical, should warning messages be reported?
+
+The function returns a table of `top`rows and 5 columns reporting the respective length, starting position, strand (1 = forward, -1 = reverse), melting temperature, and score of each primer. When `silent = FALSE` the sequence of these primers and their main statistics are also printed on screen.
+
 ## the 'run pcr.R' script
 To be able to test pirmers _in silico_ a PCR simulation script is required. Some such scripts are availble throughout the different R packages, yet none managed to do exactly what I want them to do. So, building on the DNR functions I cooked up my own script. Rather than looking for perfect matches, the function takes the [PrimerMiner](http://onlinelibrary.wiley.com/doi/10.1111/2041-210X.12687/abstract) approach of attributing position-dependent mismatch penalties (I have taken their scoring tables for the current implementation, so all credit belongs there). 
 
 The main difference with PrimerMiner's _in silico_ PCR lies in the implementation: my function considers both primers at once accros the entire sequence (it looks for valid amplicons). It also uses single DNAString objects or DNAStringSet obtjects as template rather than a sequence alignment as is the case for PrimerMiner. In this regard, 'run pcr' is more a PCR emulation, whereas the in silico PCR of 'PrimerMiner' is a primer evaluation tool.
 
 'run pcr' heavily relies on the 'DNR functions' presented above, so those have to be loaded for it to work. In fact, once the  sequence is translated into a DNR, calculating annealing scores acros entire sequences is as straightfroward as constructing a matrix by ofsetting the sequence by one basepair per row (`nrow` = primer length), substituting each integer for its score (base integers function as their score's position in the scoring matrix), and taking the `colSum`.
+
+### Input & Output
+The run.pcr function has the following arguments:
+```
+run.pcr(primer1, primer2, template, threshold = 100 )
+```
+- `primer1`: a DNAString object containing the first PCR primer sequence
+- `primer2`: a DNAString object containing the second PCR primer sequence
+- `template`: a DNAString or DNAStringSet object containing the DNA region(s) in which the function will look for valid amplicons
+- `threshold`: numerical, value above which a primer is considered not to anneal 
+
+The function returns a table with one row for each primer annealing site found and with columnes `primer` (1 or 2, indicating which primer anneals at this site),  `sense` (1 or -1, fwd or reverse strand),  `position` (position of the first base of the primer of this primer binding site), `score` (annealing score, zero means perfect match), `amp_nr` (numerical identifier of the amplicon, NA if orphan primer binding site), `amp_length` (length of the amplicon, NA if orphan primer binding site).
+
+For the function to work properly, one of the primers has to be the reverse, the other has to be the forward. The function will check both template strands for matches of the primers. All positions of the `template` are considered, mismatches stack penalties, mismatches near the 3' end receive higher penalties, as do consecutive mismatches. When `threshold` is reached the primer is considered *not* to anneal a that position. All sequence arguments have standard values (not shown here) so for an example of the function output one can just `run.pcr()` 
+
+
