@@ -37,7 +37,7 @@ if(class(template)[1] == "DNAStringSet"){ # if the object class is DNAStringSet,
   } #END of names
   amp.Set.table <- list()
   for(x in seq_along(template)){
-      amp.Set.table[[namnam[x]]] <- run_pcr(primer1, primer2, template[[x]])
+      amp.Set.table[[namnam[x]]] <- run.pcr(primer1, primer2, template[[x]])
   } # END of x for
 
 }else{
