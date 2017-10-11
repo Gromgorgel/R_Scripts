@@ -70,6 +70,7 @@ if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we
                              nrow = 2, ncol = 4)
             # now we select the best option for fusing(if any)
             flanks <- flanks[order(flanks[, 3], decreasing = T), ] # order by length of next non degenerate run
+	    flanks <- flanks[apply(flanks, 1,function(a){!any(splitt[a[2]:a[3]] == "-")}), ] # remove 'gap' containing non-ACGT runs  
             flanks <- flanks[ flanks[, 2] == 1, ]                  # take the top candidate after removing all those with too many degenerate bases in between
             if(length(flanks) > 4){ # check if multiple candidate remain
               flanks <- flanks[1, ]
