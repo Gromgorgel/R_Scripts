@@ -198,8 +198,8 @@ if(sum(dnr.tpl > 4) == 0){
          for(site2 in sites2){
            if(site2 > site1){ # we have amplicon!
             amp.counter <- amp.counter + 1 # step counter
-            amp <- matrix(c(1,  1, site1, pr2_1[2, pr2_1[1, ] == site1], amp.counter, site2 - site1 + length(dnr.pr2),
-                            2, -1, site2, pr1_2[2, pr1_2[1, ] == site2], amp.counter, site2 - site1 + length(dnr.pr2)),
+            amp <- matrix(c(1,  1, site1, pr2_1[2, which(pr2_1[1, ] == site1)], amp.counter, site2 - site1 + length(dnr.pr2),
+                            2, -1, site2, pr1_2[2, which(pr1_2[1, ] == site2)], amp.counter, site2 - site1 + length(dnr.pr2)),
                             nrow = 2, ncol = 6, byrow = T)
             colnames(amp) <- c("primer", "sense", "position", "score", "amp_nr", "amp_length")
             # AND we add it to the amp.table
