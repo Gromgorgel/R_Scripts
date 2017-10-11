@@ -401,10 +401,8 @@ digits <- function(x){
   }else{
     message("input mode not 'numeric'")
     message("NA output")
+    return(NA)	 
   }# End of input mode check
-
-  ## Standard NA output
-  return(NA)
 } # function END
 
 
