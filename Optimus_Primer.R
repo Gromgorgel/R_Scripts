@@ -62,7 +62,7 @@ require("DECIPHER")
 # check parameters (we only continue if all boxes are checked)
 ################################################################################
 if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
-	lapply(myseq, optimus.primer)
+	lapply(myseq, optimus.primer, limits, top, melt, silent)
 }else{
  if(class(myseq)[1] == "DNAString"){ # for the basic operations to work it has to be in the "DNAString" format
  if(length(myseq) >= limits[1]){ # seq lenght has to be at least the lower limit
