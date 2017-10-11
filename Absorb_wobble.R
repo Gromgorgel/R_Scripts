@@ -17,7 +17,7 @@ absorb.wobble <- function(myseq = DNAString("GAGGCAAAWGCATGAAGATGATGCTGCTCTTACAG
                   cutoff = 20, fuse = 1, top.up = 3){
 require(Biostrings)
 if(class(myseq)[1] == "DNAStringSet"){ # if the object class is DNAStringSet, we let the function call itself on each sequence in the set
-	lapply(myseq, absorb.wobble)
+	lapply(myseq, absorb.wobble, cutoff, fuse, top.up)
 }else{
   if(class(myseq)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
     # we split the DNA string into a vector of single characters
