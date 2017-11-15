@@ -64,24 +64,23 @@ To be able to test pirmers _in silico_ a PCR simulation script is required. Some
 
 The main difference with PrimerMiner's _in silico_ PCR lies in the implementation: my function considers both primers at once accros the entire sequence (it looks for valid amplicons). It also uses single DNAString objects or DNAStringSet obtjects as template rather than a sequence alignment as is the case for PrimerMiner. In this regard, 'run pcr' is more a PCR emulation, whereas the in silico PCR of 'PrimerMiner' is a primer evaluation tool.
 
-The current implementation of the script can handle degenerate bases (M, R, W, S, Y, K, V, H, D, B, & N) in both primer and template sequence. A 'best case scenario' is used when evaluating the match (i.e. if any of the possible bases represents a match, an exact match is assumed). However, template sequences sometimes contain long stretches of `NNNNNNNNN` due to sequencing errors or assembly problems. Such stretches of N can cause many primer matches under the 'best case scenario' evaluation, causing the algorithm to report huge numbers of amplicons, or take forever to complete. Therefore, a penalty system was incorporated that severely punishes consecutive N's (penalty increases with each consecutive N). The number of consecutive N that is tolerated before this procedure is called can be set by `Ntol` in the function call.
+The current implementation of the script can handle degenerate bases (M, R, W, S, Y, K, V, H, D, B, & N) in both primer and template sequence. A 'best case scenario' is used when evaluating the match (i.e. if any of the possible bases represents a match, an exact match is assumed). However, template sequences sometimes contain long stretches of `NNNNNNNNN` due to sequencing errors or assembly problems. Such stretches of N can cause many primer matches under the 'best case scenario' evaluation, causing the algorithm to report huge numbers of amplicons, or take forever to complete. Therefore, a penalty system was incorporated that severely punishes consecutive N's (penalty increases with each additional N). The number of consecutive N that is tolerated before this procedure is called can be set by `Ntol` in the function call.
 
 'run pcr' heavily relies on the 'DNR functions' presented above, so those have to be loaded for it to work. In fact, once the  sequence is translated into a DNR, calculating annealing scores acros entire sequences is as straightfroward as constructing a matrix by ofsetting the sequence by one basepair per row (`nrow` = primer length), substituting each integer for its score (base integers function as their score's position in the scoring matrix), and taking the `colSum`.
 
 ### Input & Output
 The run.pcr function has the following arguments:
 ```
-run.pcr(primer1, primer2, template, threshold = 100 )
+run.pcr(primer1, primer2, template, threshold = 100, Ntol = 5, silent = FALSE)
 ```
 - `primer1`: a DNAString object containing the first PCR primer sequence
 - `primer2`: a DNAString object containing the second PCR primer sequence
 - `template`: a DNAString or DNAStringSet object containing the DNA region(s) in which the function will look for valid amplicons
-- `threshold`: numerical, value above which a primer is considered not to anneal 
+- `threshold`: numerical, value above which a primer is considered not to anneal, defaults to 100 
 - `Ntol`: numerical, maximum number of consecutive N in the sequence that is tolerated before penalties kick in, defaults to 5
 - `silent`: logical, should warning messages be reported? In addition, if `FALSE`a progress bar will be generated when the funcion is run on a DNAStringSet
 
 The function returns a table with one row for each primer annealing site found and with columnes `primer` (1 or 2, indicating which primer anneals at this site),  `sense` (1 or -1, fwd or reverse strand),  `position` (position of the first base of the primer of this primer binding site), `score` (annealing score, zero means perfect match), `amp_nr` (numerical identifier of the amplicon, NA if orphan primer binding site), `amp_length` (length of the amplicon, NA if orphan primer binding site).
 
 For the function to work properly, one of the primers has to be the reverse, the other has to be the forward. The function will check both template strands for matches of the primers. All positions of the `template` are considered, mismatches stack penalties, mismatches near the 3' end receive higher penalties, as do consecutive mismatches. When `threshold` is reached the primer is considered *not* to anneal a that position. All sequence arguments have standard values (not shown here) so for an example of the function output one can just `run.pcr()` 
-
 
