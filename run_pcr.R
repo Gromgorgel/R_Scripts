@@ -6,14 +6,29 @@
 # so there's that.
 
 ## Changelog
- # 0.02 added support for DNAStringSet
+ # 0.0.2 added support for DNAStringSet
+ # 0.0.3 changed the way wobbles are handled in a way that wobbles in the template sequence are handled too
+ #       the new implementation also removes the restriction on the number of wobbles in primers
+ # 0.0.4 improved the way wobbles are handed (N automatically equals zero and no longer invokes expand.grid)
+ # 0.0.5 added a way to deal with stretches of NNNNNNNNN in a sequence. Long stretches, combined with the
+ #       'best case scenario' degeneray handling, created huge numbers of amplicons through which the function had to loop
+ #       essentiallty causing the algorithm to hang.
+
 
 ## Known Issues
+ # current implementaiton checks for total N rather than consecutive N before invoking the N-penalty subroutine
+  # status : SOLVED
  # currently the function can only deal with 1 degenerate base per primer, ideally, the number shouldn't matter
-  # status : DEAL WITH IT (I have no need for more degenerate bases)
+  # status : SOLVED
  # currently the function cannot deal with degenerates in the template
-  # status : DEAL WITH IT (you can present the different possibilities for the template as a DNAStringSet,
-  #                        also see dnr.explode() with argument 'undnr = TRUE' in DNR_functions)
+  # status : SOLVED
+ # degeneracy handling currenlty always uses a 'best case scenario' (eg if any of the possible bases fit, no penalty is added
+  # this makes sense for the degenerate-primer matching a sequence (as you add both versions of the primer anyway)
+  # but for a primer matching a degenerate sequence you may want to use a 'worst case scenario' as these wobbles usually
+  # represent uncertainty in the sequencing result. Ideally, this should be user defined so it can be changed when the
+  # wobbles in the template represent both alleles of a gene
+  # status :  DEAL WITH IT
+
 
 # for debugging purposes:
 #  templateSet <- DNAStringSet(c("seq1" = "TTTTACTGCCAACCAAGGATGTCAGATGATATCCTTGGTTGGCACTAGGATATGGATCTTCATGGAAAGGTCGTGTGGGAGACACTTTTGGATGCTGAA",
@@ -22,7 +37,9 @@
 run.pcr <- function(primer1 = DNAString("TACTGCCAACCAAGGATRTCA"),
                     primer2 = DNAString("GCATCCAAAAGTGTCTCCCA"),
                     template = DNAString("TTTTACTGCCAACCAAGGATGTCAGATGATATCCTTGGTTGGCACTAGGATATGGATCTTCATGGAAAGGTCGTGTGGGAGACACTTTTGGATGCTGAA"),
-                    threshold = 100 ){ # score below which amplification is considered impossible
+                    threshold = 100, # score below which amplification is considered impossible
+                    Ntol = 5,        # number of consecutive N tolerated in the sequence befor the N-stretch punishment kicks in
+                    silent = FALSE){ # print warning messages / progressbar
 
 # check parameters (we only continue if all boxes are checked)
 ################################################################################
@@ -35,11 +52,23 @@ if(class(template)[1] == "DNAStringSet"){ # if the object class is DNAStringSet,
     namnam <- apply(matrix(c(rep("seq", times =  length(templateSet)), seq_along(templateSet)),
               nrow = length(templateSet), ncol = 2), 1, function(a){paste(a[1], a[2], sep = "")})
   } #END of names
-  amp.Set.table <- list()
+  # progresbar
+  if(!isTRUE(silent)){
+    total <- length(template)
+    current <- 0
+    pb <- txtProgressBar(min = 0, max = total, style = 3)
+  }# END silent
+  amp.Set.table <- list() # create list to store results
   for(x in seq_along(template)){
-      amp.Set.table[[namnam[x]]] <- run.pcr(primer1, primer2, template[[x]])
+      amp.Set.table[[namnam[x]]] <- run.pcr(primer1, primer2, template[[x]], threshold, Ntol, silent)
+      if(!isTRUE(silent)){
+        current <- current + 1
+        setTxtProgressBar(pb, current)
+      }# END silent
   } # END of x for
-
+  if(!isTRUE(silent)){
+    close(pb)
+  }# END silent
 }else{
 ## Check for DNAString
 if(class(template)[1] == "DNAString"){ # for the basic operations to work on the DNA sequence, it has to be in the "DNAString" format
@@ -49,22 +78,20 @@ if(class(template)[1] == "DNAString"){ # for the basic operations to work on the
   dnr.pr1 <- DNR(primer1,  type = 1)
   dnr.pr2 <- DNR(primer2,  type = 1)
   dnr.tpl <- DNR(template, type = 1)
-  # we allow 1 degenerate base per primer
-if(sum(dnr.pr1 > 4) < 2 & sum(dnr.pr2 > 4) < 2){
-  # We currently do NOT allow degenerate bases in the template
-  # now we add a check for the number of degenerate bases:
-if(sum(dnr.tpl > 4) == 0){
+  # we check the max number of consecutive N's
+   Nmax <- rle(as.numeric(dnr.tpl == 1234))$lengths[rle(as.numeric(dnr.tpl == 1234))$values == 1]
+   Nmax <- if(length(Nmax) == 0){ 0 }else{ max(Nmax) }
 
 # Main function body
 ################################################################################
 ## Scores & penalties are taken from: Elbrecht & Leese, Methods in Ecology and Evolution 2017, 8, 622-626
 
-  ## score conversion matrix 
+  ## score conversion matrix
    # by having the row & col numbers correspond to the base DNR integers we can select the right columns like: score.conv[dnr.pr2,]
   score.conv <-  matrix(c(  0,   1, 0.5,   1,  #  A = 1
-                            2,	 0,   2,  0.5,  #  C = 2
+                            2,	 0,   2, 0.5,  #  C = 2
                           0.5,   2,   0,   1,  #  G = 3
-                            2, 0.5,   2,	  0), #  T = 4
+                            2, 0.5,   2,	 0), #  T = 4
                         nrow = 4, ncol = 4, byrow = T)
   pos.penalty <- c(242.4, 202.8, 169.8, 142.4, 119.5, 100.4, 84.5 , 71.2, 60.2, 51, 43.3, 36.9,
                    31.6, 27.2, 23.5, 20.4, 17.8, 15.7, 13.9, 12.4, 11.2, 10.2, 9.3, 8.6, 8,
@@ -74,7 +101,7 @@ if(sum(dnr.tpl > 4) == 0){
   ##############################################################################
   ## we will do a complete analysis: match both primers in both directions,
    # to do so, we need to create 2 loops: one over the primers (p), one over the directions (d)
-   # we also create a loop to accomodate any degenerate bases in the primer
+   # In this implementation we accomodate any degenerate bases during the look-up
   for(d in 1:2){ ## direction loop
 
     for(p in 1:2){  ## Primer loop
@@ -84,21 +111,23 @@ if(sum(dnr.tpl > 4) == 0){
            primer <- dnr.comp(primer)
         }# END if d
 
+      # to prevent long stretches of N to cause near infinite amplicons we'll add penalties for subsequent N
+      # we make a penalty matrix of equal size to the score matrix that has penalties where the N's are
+      # since score matrix size is dependent on the primer size we have to redesign the penalty matrix for each primer
+      if(sum(dnr.tpl == 1234) > Ntol){
+        N.penalty <- dnr.tpl == 1234
+        N.penalty <- 10 * (cumsum(N.penalty) - cummax(cumsum(N.penalty) * c(0, !(diff(cumsum(N.penalty))))))
+        N.penalty[N.penalty != 0] <- N.penalty[N.penalty != 0] - 10
+        # OK, there are now scores for every position in the sequence. non-N have penalty zero.
+        # for a given stretch of N, The first N in a stretch has penalty zero, the next 10, then 20, 30, 40 etc.
+        # we now wrap the series of scores in a matrix which we can later add to the scorebox
+        N.penalty <- matrix(c(rep(N.penalty, times = length(primer)), rep(NA, times = length(primer))),
+                            nrow = length(primer), ncol = length(N.penalty) + 1, byrow = TRUE)
+        N.penalty <- N.penalty[ , head(1:dim(N.penalty)[2], -length(primer))]
+      }
+
       # this is also where we create the binding position matrix so we can add to it (in case of degenerates)
       binder <- matrix(c(NA, NA), nrow = 2, ncol = 1)
-
-      ## check for degenerate bases
-      if(any(primer > 4)){
-        wub.pos <- which(primer > 4)
-        wub <- digits(primer[wub.pos])
-      }else{ # no wobbles
-        wub <- 0
-      }# END of
-
-      for(w in wub){ ## wobble loop
-        if(w != 0){  # if there are wobbles, we replace them by their digits
-          primer[wub.pos] <- w
-        } # END if w
 
         # Actual primer matching
         ########################################################################
@@ -114,15 +143,31 @@ if(sum(dnr.tpl > 4) == 0){
 
         ## create empty score matrix
         scorebox <- matrix(nrow = length(primer), ncol = dim(matchbox)[2])
-        # as the dnr functions as its own look-up we can just use the base integers to retrieve their match score
+        # since the dnr functions as its own look-up we can just use the base integers to retrieve their match score
         for(i in seq_along(primer)){ # loop primer
+           ii <- if(primer[i] > 4){ digits(primer[i]) }else{ primer[i] }
            for(j in 1:dim(matchbox)[2]){ # loop sequence
-              scorebox[i, j] <- score.conv[primer[i], matchbox[i, j]]
+              jj <- if(matchbox[i, j] > 4){ digits(matchbox[i, j]) }else{ matchbox[i, j] }
+              # handling degenerates: using the best case scenario
+              if(any(ii %in% jj)){ # in case there is a match between primer and template posisbilities the score is zero
+                scorebox[i, j] <- 0
+              }else if(length(c(ii, jj)) > 2){
+                comb.over <- expand.grid("ii" = ii,"jj" = jj) # make all combinations possible
+                # save only lowest penalty (best case scenario)
+                scorebox[i, j] <- min(apply(comb.over, 1, function(a){ return( score.conv[a[1], a[2]] )}))
+              }else{
+                scorebox[i, j] <- score.conv[ii, jj]
+              } # END of if > 2
            } # END of j loop
-        } # END of i loop
+      } # END of i loop
 
         ## Next we multiply each score with a penalty depending on its position in the primer
         scorebox <- sweep(scorebox, MARGIN = 1, pos.penalty[1:length(primer)], '*')
+
+        ## we also sweep with the multiple N penalties if Ntol is reached
+        if(sum(dnr.tpl == 1234) > Ntol){
+          scorebox <- scorebox + N.penalty
+        }
 
         ## to complete the score, all we need to do is increase the penalty scores for adjecent mismatches
         for(i in 1:dim(scorebox)[2]){ # loop sequence
@@ -142,21 +187,9 @@ if(sum(dnr.tpl > 4) == 0){
         }else if(length(bind) == 0){
            bind <- matrix(c(NA, NA), nrow = 2, ncol = 1)
         }# END if else
-        # we add the bininding sites to the binder vector, except if the binding site is already
-        # there (from another wobble integer), in that case we update the annealing score (if it's lower & thus more likely)
-        if(any(bind[1, !is.na(bind[1,])] %in% binder[1, !is.na(binder[1,])])){ # some binding positions are already present (excluding NAs)
-          dupes <- unique(c(bind[1, ], binder[1, ])[duplicated(c(bind[1, ], binder[1, ]))]) # duplicated values
-          dupes <- dupes[!is.na(dupes)] # remove NA values from duplicates
-          # we start by adding the non-duplicated ones to binder
-          binder <- cbind(binder, bind[,!bind[1, ] %in% dupes])
-          for(v in dupes){ # loop through duplicated values
-            binder[2, binder[1, ] == v] <- min(c(binder[2, binder[1, ] == v], bind[2, bind[1, ] == v]), na.rm = TRUE)
-          } # END for v
-        }else{ # no duplicated values
-          binder <- cbind(binder, bind)
-        } # END any duplicated
-      } # END for w
 
+    ## we add the binding sites to the binder vector
+    binder <- cbind(binder, bind)
     ## we now save the results for the current primer & direction comibination (before going to the next primer)
     varname <-  paste("pr", p, "_", d, sep = "")
     assign(varname, binder)
@@ -165,7 +198,8 @@ if(sum(dnr.tpl > 4) == 0){
 
   # somewhere we have to cbind the "bind" matrices so that the wobbles are joined
   # by creating an empty vector at the start this should work out when there are no wobbles as well
-  amp.table <- matrix(c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA, "amp_nr" = NA, "amp_length" = NA),
+  # we will fill this vector with zeroes rather than NA so that error => NA and no amplicon => zero
+  amp.table <- matrix(c("primer" = 0, "sense" = 0, "position" = 0, "score" = 0, "amp_nr" = 0, "amp_length" = 0),
                       nrow = 1, ncol = 6)
   amp.counter <- 0
   ## checking for amplicons and building the annealing table
@@ -217,42 +251,38 @@ if(sum(dnr.tpl > 4) == 0){
     to.add <- which(!pos[1, ] %in% amp.table[, 3])
     nr <- length(pos[1, to.add])
     sns <- if(d == 1){ 1 }else{ -1 }
-    amp.table <- rbind(amp.table, matrix(c(rep(p, times = nr), rep(sns, times = nr), pos[1, to.add], pos[2, to.add], 
-                                           rep(NA, times = nr), rep(NA, times = nr)), ncol = 6, nrow = nr, byrow = F))
+    amp.table <- rbind(amp.table, matrix(c(rep(p, times = nr), rep(sns, times = nr), pos[1, to.add], pos[2, to.add], rep(NA, times = nr), rep(NA, times = nr))
+                       ,ncol = 6, nrow = nr, byrow = F))
     } # END for p
   } # ENd for d
 
  # in a last step, we check if the amp.table has grown (if so we cut off the first line which were placeholder NAs)
- if(length(amp.table) > 5){
+ if(length(amp.table) > 6){
    amp.table <- amp.table[-1, ]
-   } # END length amp.table
+   # if only one row remains R will simplify it into a vector which will screw with downstream commands so we check:
+   if(length(amp.table) == 6){
+     amp.table <- matrix(amp.table, nrow = 1, ncol = 6)
+   }
+ } # END length amp.table
 
- map <- setNames(c("fwd", "rev"), c(1,-1))
- rownames(amp.table) <- map[as.character(amp.table[, 2])]
- 
- 
+   map <- setNames(c("fwd", "rev"), c(1,-1))
+   rownames(amp.table) <- map[as.character(amp.table[, 2])]
+
   ## Succesful analysis output
   return(amp.table)
 
+  #return(list("pr1_FWD" = pr1_1, "pr1_REV" = pr1_2, "pr2_FWD" = pr2_1, "pr2_REV" = pr2_2))
+
 ################################################################################
 ## Error Reporting
-  }else{ # WOBBLY TEMPLATE
-    message("template sequence contains degenerate bases")
-    message("NA output")
-  }# End of input check for degenerate bases (template)
-
-  }else{ # WOBBLY PRIMERS
-    message("primer sequences contain too many degenerate bases")
-    message("NA output")
-  }# End of input check for degenerate bases (primers)
-
   }else{ #CLASS DNASTRING
     message("template sequence is not of class DNAString")
     message("NA output")
   }# End of input class check (DNAString)
 
   ## Standard NA output
-    return(c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA, "amp_nr" = NA, "amp_length" = NA))
+  return(matrix(c("primer" = NA, "sense" = NA, "position" = NA, "score" = NA, "amp_nr" = NA, "amp_length" = NA), nrow = 1, ncol =6))
 }# End of input class check (DNAStringSet)
   return(amp.Set.table)
 } # function END
+
