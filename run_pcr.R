@@ -114,7 +114,7 @@ if(class(template)[1] == "DNAString"){ # for the basic operations to work on the
       # to prevent long stretches of N to cause near infinite amplicons we'll add penalties for subsequent N
       # we make a penalty matrix of equal size to the score matrix that has penalties where the N's are
       # since score matrix size is dependent on the primer size we have to redesign the penalty matrix for each primer
-      if(sum(dnr.tpl == 1234) > Ntol){
+      if(Nmax > Ntol){
         N.penalty <- dnr.tpl == 1234
         N.penalty <- 10 * (cumsum(N.penalty) - cummax(cumsum(N.penalty) * c(0, !(diff(cumsum(N.penalty))))))
         N.penalty[N.penalty != 0] <- N.penalty[N.penalty != 0] - 10
@@ -165,7 +165,7 @@ if(class(template)[1] == "DNAString"){ # for the basic operations to work on the
         scorebox <- sweep(scorebox, MARGIN = 1, pos.penalty[1:length(primer)], '*')
 
         ## we also sweep with the multiple N penalties if Ntol is reached
-        if(sum(dnr.tpl == 1234) > Ntol){
+        if(Nmax > Ntol){
           scorebox <- scorebox + N.penalty
         }
 
